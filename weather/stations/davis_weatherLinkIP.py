@@ -23,7 +23,7 @@ Original Author: Christopher Blunck (chris@wxnet.org)
 Date: 2006-03-27
 '''
 
-from __future__ import absolute_import
+
 
 from ._struct import Struct
 from ..units import *
@@ -205,7 +205,7 @@ class _ArchiveStruct(object):
 
     def _post_unpack(self, items):
         vals = self._unpack_date_time(items['DateStamp'], items['TimeStamp'])
-        items.update(zip(('Year', 'Month', 'Day', 'Hour', 'Min'), vals))
+        items.update(list(zip(('Year', 'Month', 'Day', 'Hour', 'Min'), vals)))
         items['TempOut'] = items['TempOut'] / 10.0
         items['TempOutHi'] = items['TempOutHi'] / 10.0
         items['TempOutLow'] = items['TempOutLow'] / 10.0
@@ -484,7 +484,7 @@ class VantagePro(object):
         issue wakeup command to device to take out of standby mode.
         '''
         log.info("send: WAKEUP")
-        for i in xrange(3):
+        for i in range(3):
             self.socket.sendall('\n')  # wakeup device
             ack = self.socket.recv(len(self.WAKE_ACK))  # read wakeup string
             log_raw('read', ack)
@@ -502,7 +502,7 @@ class VantagePro(object):
         self._wakeup()
         if args:
             cmd = "%s %s" % (cmd, ' '.join(str(a) for a in args))
-        for i in xrange(3):
+        for i in range(3):
             log.info("send: " + cmd)
             self.socket.sendall(cmd + '\n')
             if ok:
@@ -560,7 +560,7 @@ class VantagePro(object):
         dmp = DmpStruct.unpack(raw)
         log.info('reading %d pages, start offset %d' %
                  (dmp['Pages'], dmp['Offset']))
-        for i in xrange(dmp['Pages']):
+        for i in range(dmp['Pages']):
             # 5. read page data
             raw = self.socket.recv(DmpPageStruct.size)
             log_raw('read', raw)
@@ -591,7 +591,7 @@ class VantagePro(object):
         return records
 
     def _get_loop_fields(self):
-        for i in xrange(3):
+        for i in range(3):
             raw = self._loop_cmd()  # read raw data
             crc_ok = VProCRC.verify(raw)
             if crc_ok: break  # exit loop if valid
@@ -607,7 +607,7 @@ class VantagePro(object):
         returns a dictionary of fields from the newest archive record in the
         device. return None when no records are new.
         '''
-        for i in xrange(3):
+        for i in range(3):
             records = self._dmpaft_cmd(self._archive_time)
             if records is not None: break
             time.sleep(1)
@@ -672,7 +672,7 @@ class VantagePro(object):
         Get the current time from the console
         :returns: the current time in datetime format
         '''
-        for i in xrange(3):
+        for i in range(3):
             self._cmd('GETTIME')
             raw = self.socket.recv(timeStruct.size)  # read data
             log_raw('read', raw)
