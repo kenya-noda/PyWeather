@@ -46,7 +46,7 @@ BAUD = 19200
 
 
 def log_raw(msg, raw):
-    log.debug(msg + ': ' + raw.encode('hex'))
+    log.debug("msg + ': ' + raw")
 
 
 class NoDeviceException(Exception):
@@ -485,8 +485,9 @@ class VantagePro(object):
         '''
         log.info("send: WAKEUP")
         for i in range(3):
-            self.socket.sendall('\n')  # wakeup device
+            self.socket.sendall(b'\n')  # wakeup device
             ack = self.socket.recv(len(self.WAKE_ACK))  # read wakeup string
+            ack = ack.decode()
             log_raw('read', ack)
             if ack == self.WAKE_ACK:
                 return
@@ -504,14 +505,16 @@ class VantagePro(object):
             cmd = "%s %s" % (cmd, ' '.join(str(a) for a in args))
         for i in range(3):
             log.info("send: " + cmd)
-            self.socket.sendall(cmd + '\n')
+            self.socket.sendall((cmd + '\n').encode())
             if ok:
                 ack = self.socket.recv(len(self.OK))  # read OK
+                ack = ack.decode()
                 log_raw('read', ack)
                 if ack == self.OK:
                     return
             else:
                 ack = self.socket.recv(len(self.ACK))  # read ACK
+                ack = ack.decode()
                 log_raw('read', ack)
                 if ack == self.ACK:
                     return
@@ -543,6 +546,7 @@ class VantagePro(object):
         log_raw('send', tbuf + crc)
         self.socket.sendall(tbuf + crc)  # send time stamp + crc
         ack = self.socket.recv(len(self.ACK))  # read ACK
+        ack = ack.decode()
         log_raw('read', ack)
         if ack != self.ACK: return  # if bad ack, return
 
@@ -551,10 +555,10 @@ class VantagePro(object):
         log_raw('read', raw)
         if not VProCRC.verify(raw):  # check CRC value
             log_raw('send ESC', self.ESC)
-            self.socket.sendall(self.ESC)  # if bad, escape and abort
+            self.socket.sendall(self.ESC.encode())  # if bad, escape and abort
             return
         log_raw('send ACK', self.ACK)
-        self.socket.sendall(self.ACK)  # send ACK
+        self.socket.sendall(self.ACK.encode())  # send ACK
 
         # 4. loop through all page records
         dmp = DmpStruct.unpack(raw)
@@ -566,10 +570,10 @@ class VantagePro(object):
             log_raw('read', raw)
             if not VProCRC.verify(raw):  # check CRC value
                 log_raw('send ESC', self.ESC)
-                self.socket.sendall(self.ESC)  # if bad, escape and abort
+                self.socket.sendall(self.ESC.encode())  # if bad, escape and abort
                 return
             log_raw('send ACK', self.ACK)
-            self.socket.sendall(self.ACK)  # send ACK
+            self.socket.sendall(self.ACK.encode())  # send ACK
 
             # 6. loop through archive records
             page = DmpPageStruct.unpack(raw)
@@ -655,17 +659,19 @@ class VantagePro(object):
         read and parse a set of data read from the console.  after the
         data is parsed it is available in the fields variable.
         '''
-        # fields = self._get_loop_fields()
+        fields = self._get_loop_fields()
         # fields = {}
         # fields['Archive'] = self._get_new_archive_fields()
 
-        fields = self._get_new_archive_fields()
-
+        #fields = self._get_new_archive_fields()
+        """
         for i in range(0, fields.__len__()):
             self._calc_derived_fields(fields[i])
-
+        """
         # set the fields variable the the values in the dict
         self.fields = fields
+        #print(self.fields)
+        return self.field
 
     def getTime(self):
         '''
@@ -699,6 +705,7 @@ class VantagePro(object):
         crc = struct.pack('>H', crc)  # crc in big-endian format
         self.socket.sendall(tbuf + crc)  # send time stamp + crc
         ack = self.socket.recv(len(self.ACK))  # read ACK
+        ack = ack.decode()
         if ack != self.ACK: return  # if bad ack, return
 
     def clearLog(self):
