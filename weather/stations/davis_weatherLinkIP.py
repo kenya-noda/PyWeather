@@ -671,7 +671,7 @@ class VantagePro(object):
         # set the fields variable the the values in the dict
         self.fields = fields
         #print(self.fields)
-        return self.field
+        return self.fields
 
     def getTime(self):
         '''
