@@ -418,9 +418,11 @@ class VantagePro(object):
         :param logStartDate: the datetime.datetime object representing the starting log date. Default None aka "all"
         :param clear: boolean, if true clean all the log in the console. Default False
         '''
+        self.ip = ip
+        self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip, port))
-        self.socket.settimeout(600)  # set the TPC socket timeout to 600 sec
+        self.socket.connect((self.ip, self.port))
+        self.socket.settimeout(30)  # set the TPC socket timeout to 30 sec
         # set the logging interval to be downloaded. Default all
         self.setArchiveTime(logStartDate)
         # Clear the whole archive if necessary. Default: no
@@ -486,11 +488,17 @@ class VantagePro(object):
         log.info("send: WAKEUP")
         for i in range(3):
             self.socket.sendall(b'\n')  # wakeup device
-            ack = self.socket.recv(len(self.WAKE_ACK))  # read wakeup string
-            ack = ack.decode()
-            log_raw('read', ack)
-            if ack == self.WAKE_ACK:
-                return
+            try:
+                ack = self.socket.recv(len(self.WAKE_ACK))  # read wakeup string
+                ack = ack.decode()
+                log_raw('read', ack)
+                if ack == self.WAKE_ACK:
+                    return
+            except socket.timeout:
+                self.socket.close()
+                time.sleep(0.1)
+                self.socket.connect((self.ip, self.port))
+                continue
         raise NoDeviceException('Can not access weather station')
 
     def _cmd(self, cmd, *args, **kw):
@@ -506,18 +514,24 @@ class VantagePro(object):
         for i in range(3):
             log.info("send: " + cmd)
             self.socket.sendall((cmd + '\n').encode())
-            if ok:
-                ack = self.socket.recv(len(self.OK))  # read OK
-                ack = ack.decode()
-                log_raw('read', ack)
-                if ack == self.OK:
-                    return
-            else:
-                ack = self.socket.recv(len(self.ACK))  # read ACK
-                ack = ack.decode()
-                log_raw('read', ack)
-                if ack == self.ACK:
-                    return
+            try:
+                if ok:
+                    ack = self.socket.recv(len(self.OK))  # read OK
+                    ack = ack.decode()
+                    log_raw('read', ack)
+                    if ack == self.OK:
+                        return
+                else:
+                    ack = self.socket.recv(len(self.ACK))  # read ACK
+                    ack = ack.decode()
+                    log_raw('read', ack)
+                    if ack == self.ACK:
+                        return
+            except socket.timeout:
+                self.socket.close()
+                time.sleep(0.1)
+                self.socket.connect((self.ip, self.port))
+                continue
         raise NoDeviceException('Can not access weather station')
 
     def _loop_cmd(self):
@@ -525,9 +539,16 @@ class VantagePro(object):
         reads a raw string containing data read from the console, all reads are non-blocking.
         '''
         self._cmd('LOOP', 1)
-        raw = self.socket.recv(LoopStruct.size)  # read data
-        log_raw('read', raw)
-        return raw
+        try:
+            raw = self.socket.recv(LoopStruct.size)  # read data
+            log_raw('read', raw)
+            return raw
+        except socket.timeout:
+            self.socket.close()
+            time.sleep(0.1)
+            self.socket.connect((self.ip, self.port))
+            return
+
 
     def _dmpaft_cmd(self, time_fields):
         '''
