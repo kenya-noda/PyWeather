@@ -486,7 +486,7 @@ class VantagePro(object):
         issue wakeup command to device to take out of standby mode.
         '''
         log.info("send: WAKEUP")
-        for i in range(3):
+        for i in range(10):
             self.socket.sendall(b'\n')  # wakeup device
             try:
                 ack = self.socket.recv(len(self.WAKE_ACK))  # read wakeup string
